@@ -311,7 +311,7 @@ export default function JoinEvent() {
             <div className="text-center mb-4">
               <div className="text-3xl mb-1">✅</div>
               <h2 className="font-bold text-lg">{t('join.done.thanks', { name })}</h2>
-              <p className="text-sm mt-1" style={{ color: 'var(--color-muted)' }}>{t('join.done.saved', { deadline: fmtDeadline(event.deadline_at, t) })}</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--color-muted)' }}>{t('join.done.saved')}</p>
             </div>
 
             <div className="text-sm mb-3">
