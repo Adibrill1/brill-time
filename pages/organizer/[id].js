@@ -300,6 +300,7 @@ export default function OrganizerDash() {
                   selectedSlots={new Set()}
                   allowedSlots={organizer_slots?.length > 0 ? organizer_slots : null}
                   existingAvailability={availability}
+                  currentParticipantId={organizerParticipantId}
                   startDate={startDate}
                   numDays={DAYS_TO_SHOW}
                   readOnly
