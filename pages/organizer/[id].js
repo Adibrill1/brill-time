@@ -9,17 +9,6 @@ import { findWinningSlot } from '../../lib/algorithm';
 
 const DAYS_TO_SHOW = 7;
 
-function fmtDeadline(deadlineAt, t) {
-  const d = new Date(deadlineAt);
-  const pad = n => String(n).padStart(2, '0');
-  return t('common.deadlineFormat', {
-    day: t('common.days')[d.getDay()],
-    date: d.getDate(),
-    month: d.getMonth() + 1,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
-  });
-}
-
 function fmtSlot(slot, t) {
   const start = new Date(slot.slot_start);
   const end = new Date(slot.slot_end);
@@ -271,10 +260,7 @@ export default function OrganizerDash() {
             <span style={{ color: 'var(--color-muted)' }}> {t('grid.participants')} {t('join.done.countSuffix')}</span>
             {leadingSlot && !leadingSlot.cancelled && (
               <p className="mt-2 text-xs font-medium" style={{ color: '#16a34a' }}>
-                {t('join.done.leadingSlot', {
-                  slot: fmtSlot(leadingSlot, t),
-                  deadline: fmtDeadline(event.deadline_at, t),
-                })}
+                {t('join.done.leadingSlot', { slot: fmtSlot(leadingSlot, t) })}
               </p>
             )}
           </div>
