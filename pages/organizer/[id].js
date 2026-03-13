@@ -5,8 +5,33 @@ import Layout from '../../components/Layout';
 import CountdownTimer from '../../components/CountdownTimer';
 import AvailabilityGrid from '../../components/AvailabilityGrid';
 import { useTranslation } from '../../lib/useTranslation';
+import { findWinningSlot } from '../../lib/algorithm';
 
 const DAYS_TO_SHOW = 7;
+
+function fmtDeadline(deadlineAt, t) {
+  const d = new Date(deadlineAt);
+  const pad = n => String(n).padStart(2, '0');
+  return t('common.deadlineFormat', {
+    day: t('common.days')[d.getDay()],
+    date: d.getDate(),
+    month: d.getMonth() + 1,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  });
+}
+
+function fmtSlot(slot, t) {
+  const start = new Date(slot.slot_start);
+  const end = new Date(slot.slot_end);
+  const pad = n => String(n).padStart(2, '0');
+  return t('common.slotFormat', {
+    day: t('common.days')[start.getDay()],
+    date: start.getDate(),
+    month: start.getMonth() + 1,
+    startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+    endTime: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
+  });
+}
 
 export default function OrganizerDash() {
   const { t } = useTranslation();
@@ -130,6 +155,13 @@ export default function OrganizerDash() {
   const { event, participants, availability, organizer_slots } = eventData;
   const nonOrganizerParticipants = participants.filter(p => !p.is_organizer);
   const submitted = nonOrganizerParticipants.filter(p => availability[p.id]);
+  const minNeeded = event.min_participants || 2;
+  const stillNeeded = Math.max(0, minNeeded - submitted.length);
+
+  // Current leading slot — shown while event is open and there are enough participants
+  const leadingSlot = (event.status === 'open' && stillNeeded === 0)
+    ? findWinningSlot(participants, availability, minNeeded, organizer_slots?.length > 0 ? organizer_slots : null)
+    : null;
 
   const cardStyle = { backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' };
 
@@ -232,11 +264,19 @@ export default function OrganizerDash() {
           </div>
         </div>
 
-        {/* Participant count */}
+        {/* Participant count + leading slot */}
         {nonOrganizerParticipants.length > 0 && (
           <div className="rounded-xl p-4 mb-4 text-sm" style={cardStyle}>
             <span className="font-medium">{submitted.length}/{nonOrganizerParticipants.length}</span>
             <span style={{ color: 'var(--color-muted)' }}> {t('grid.participants')} {t('join.done.countSuffix')}</span>
+            {leadingSlot && !leadingSlot.cancelled && (
+              <p className="mt-2 text-xs font-medium" style={{ color: '#16a34a' }}>
+                {t('join.done.leadingSlot', {
+                  slot: fmtSlot(leadingSlot, t),
+                  deadline: fmtDeadline(event.deadline_at, t),
+                })}
+              </p>
+            )}
           </div>
         )}
 

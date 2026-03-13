@@ -5,6 +5,7 @@ import Layout from '../../components/Layout';
 import CountdownTimer from '../../components/CountdownTimer';
 import AvailabilityGrid from '../../components/AvailabilityGrid';
 import { useTranslation } from '../../lib/useTranslation';
+import { findWinningSlot } from '../../lib/algorithm';
 
 const DAYS_TO_SHOW = 7;
 const POLL_INTERVAL = 5000;
@@ -18,6 +19,19 @@ function fmtDeadline(deadlineAt, t) {
     date: d.getDate(),
     month: d.getMonth() + 1,
     time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  });
+}
+
+function fmtSlot(slot, t) {
+  const start = new Date(slot.slot_start);
+  const end = new Date(slot.slot_end);
+  const pad = n => String(n).padStart(2, '0');
+  return t('common.slotFormat', {
+    day: t('common.days')[start.getDay()],
+    date: start.getDate(),
+    month: start.getMonth() + 1,
+    startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+    endTime: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
   });
 }
 
@@ -264,6 +278,11 @@ export default function JoinEvent() {
   const minNeeded = event.min_participants || 2;
   const stillNeeded = Math.max(0, minNeeded - total);
 
+  // Compute the current leading slot (best candidate right now, before deadline)
+  const leadingSlot = (!isDeadlinePassed && stillNeeded === 0)
+    ? findWinningSlot(participants, availability, minNeeded, organizer_slots?.length > 0 ? organizer_slots : null)
+    : null;
+
   // Done screen
   if (phase === 'done' && !isEditing) {
     return (
@@ -311,7 +330,9 @@ export default function JoinEvent() {
 
             {!isDeadlinePassed && stillNeeded === 0 && (
               <div className="py-2 px-3 rounded-lg text-sm mb-2" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
-                🎉 {t('join.done.enoughParticipants', { day: '', time: '' }).split(',')[0]}
+                {leadingSlot && !leadingSlot.cancelled
+                  ? t('join.done.leadingSlot', { slot: fmtSlot(leadingSlot, t), deadline: fmtDeadline(event.deadline_at, t) })
+                  : `🎉 ${t('join.done.enoughParticipants', { day: '', time: '' }).split(',')[0]}`}
               </div>
             )}
 
