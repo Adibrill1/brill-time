@@ -9,7 +9,16 @@ const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_
 const DARK_BG = '#0f172a';      // slate-900: empty / blocked slots (black)
 const OPEN_BG = '#ffffff';      // white: organizer-allowed, no one picked yet
 
-// Heat gradient: blue-300 (תכלת, few) → blue-800 (כחול כהה, many)
+// Heat gradient when organizer set allowed slots: white → blue-500
+// (allowed slots stay light/white-based so they stay visually distinct from blocked black)
+function heatColorOnWhite(intensity) {
+  const r = Math.round(255 + (59  - 255) * intensity);
+  const g = Math.round(255 + (130 - 255) * intensity);
+  const b = Math.round(255 + (246 - 255) * intensity);
+  return `rgb(${r},${g},${b})`;
+}
+
+// Heat gradient when no organizer restriction: blue-300 (תכלת) → blue-800 (כחול כהה)
 function heatColor(intensity) {
   const r = Math.round(147 + (30  - 147) * intensity);
   const g = Math.round(197 + (64  - 197) * intensity);
@@ -68,11 +77,16 @@ function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOn
   if (isSelected) {
     return { bg: selectionColor, cursor: readOnly ? 'default' : 'pointer' };
   }
-  // Others picked this slot → light-blue (תכלת) to dark-blue gradient
+  // Organizer-allowed slot with heat → white → blue-500 gradient
+  // (stays light so allowed slots always read as "white" vs blocked "black")
+  if (heatCount > 0 && allowedSet) {
+    return { bg: heatColorOnWhite(intensity), cursor: readOnly ? 'default' : 'pointer' };
+  }
+  // Unrestricted slot with heat → blue-300 → blue-800 gradient
   if (heatCount > 0) {
     return { bg: heatColor(intensity), cursor: readOnly ? 'default' : 'pointer' };
   }
-  // Organizer allowed this slot but no one picked it yet → WHITE
+  // Organizer allowed this slot, no heat yet → pure WHITE
   if (isAllowed && allowedSet) {
     return { bg: OPEN_BG, cursor: readOnly ? 'default' : 'pointer' };
   }
@@ -248,8 +262,9 @@ export default function AvailabilityGrid({
         {allowedSet && <LegendDot color={OPEN_BG} label={t('grid.legend.shared')} bordered />}
         {maxHeat > 0 && (
           <LegendDot
-            gradient={['#93c5fd', '#1e40af']}
+            gradient={allowedSet ? ['#ffffff', '#3b82f6'] : ['#93c5fd', '#1e40af']}
             label={t('grid.legend.others')}
+            bordered={!!allowedSet}
           />
         )}
       </div>
