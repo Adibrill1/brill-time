@@ -23,8 +23,12 @@ export default function OrganizerDash() {
   const [hasSaved, setHasSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const startDate = new Date();
-  startDate.setHours(0, 0, 0, 0);
+  // Use event creation date as fixed anchor so every participant sees identical columns
+  const startDate = (() => {
+    const d = new Date(eventData?.event?.created_at || Date.now());
+    d.setHours(0, 0, 0, 0);
+    return d;
+  })();
 
   const fetchEvent = useCallback(async () => {
     if (!id) return;
