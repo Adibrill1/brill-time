@@ -6,16 +6,15 @@ const END_HOUR = 23; // slots: 7:00–22:00 (16 slots)
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
 // Cell colors — fixed, independent of light/dark mode
-const OPEN_BG     = '#dbeafe';  // blue-100: organizer-allowed, nobody picked yet (shared time)
-const DISABLED_BG = '#94a3b8';  // slate-400: not in organizer's window → shown at opacity 0.35
+const OPEN_BG  = '#9ac0ff';  // light blue: organizer-allowed / user's own selection
+const EMPTY_BG = '#0f172a';  // dark navy: nobody selected this slot (any empty cell)
 
-// 3-stop heat gradient: blue-periwinkle → warm gray → amber orange
-// Matches the diverging heatmap palette (low = blue, mid = gray, high = orange).
-// Green (selectionColor) always overrides heat for the current user's own picks.
+// 3-stop heat gradient (all blue shades):
+//   #9ac0ff (low demand) → #739ee7 (moderate) → #1e3a8a (highest demand)
 const HEAT_STOPS = [
-  [110, 135, 215],   // blue-periwinkle  (1 participant)
-  [160, 148, 132],   // warm gray        (mid)
-  [242, 160, 28],    // amber orange     (max participants)
+  [154, 192, 255],   // #9ac0ff — light blue  (1 participant, מעט ביקוש)
+  [115, 158, 231],   // #739ee7 — medium blue (mid,           יותר מתאים)
+  [ 30,  58, 138],   // #1e3a8a — dark navy   (max,           כרגע הכי מתאים)
 ];
 
 function heatColor(intensity) {
@@ -77,24 +76,24 @@ function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOn
   const heatCount  = heat[slotStart] || 0;
   const intensity  = maxHeat > 0 ? heatCount / maxHeat : 0;
 
-  // Disabled: not in organizer's allowed window → dimmed (opacity applied in cellStyle)
+  // Not in organizer's window → dark (blocked)
   if (!isAllowed && allowedSet) {
-    return { bg: DISABLED_BG, cursor: 'not-allowed', opacity: 0.35 };
+    return { bg: EMPTY_BG, cursor: 'not-allowed' };
   }
-  // Current user's own pick → GREEN (always overrides everything else)
+  // User's own pick → light blue (same as organizer's marker)
   if (isSelected) {
     return { bg: selectionColor, cursor: readOnly ? 'default' : 'pointer' };
   }
-  // Others have picked this slot → blue heat gradient (light = few, dark = many)
+  // Others picked this slot → heat gradient (light blue → dark navy)
   if (heatCount > 0) {
     return { bg: heatColor(intensity), cursor: readOnly ? 'default' : 'pointer' };
   }
-  // Organizer allowed this slot, nobody picked yet → light blue (shared time)
+  // Organizer-allowed, nobody picked yet → light blue
   if (isAllowed && allowedSet) {
     return { bg: OPEN_BG, cursor: readOnly ? 'default' : 'pointer' };
   }
-  // No organizer restriction, empty → transparent (shows card background)
-  return { bg: 'transparent', cursor: readOnly ? 'default' : 'pointer' };
+  // No restriction, nobody selected → dark navy
+  return { bg: EMPTY_BG, cursor: readOnly ? 'default' : 'pointer' };
 }
 
 export default function AvailabilityGrid({
@@ -108,7 +107,7 @@ export default function AvailabilityGrid({
   numDays = 7,
   filterDisplayDays = false,
   filterDisplayHours = false,
-  selectionColor = '#22c55e',   // green while picking
+  selectionColor = '#9ac0ff',   // light blue: my selection / organizer's marker
 }) {
   const { t } = useTranslation();
 
@@ -195,12 +194,11 @@ export default function AvailabilityGrid({
       : t('grid.hint.plain');
 
   const cellStyle = (slotStart) => {
-    const { bg, cursor, opacity } = getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor });
+    const { bg, cursor } = getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor });
     return {
       backgroundColor: bg,
       cursor,
-      opacity: opacity ?? 1,
-      border: '1px solid rgba(0,0,0,0.08)',
+      border: '1px solid rgba(255,255,255,0.08)',
       height: 28,
       touchAction: 'pan-y',
       userSelect: 'none',
@@ -259,11 +257,11 @@ export default function AvailabilityGrid({
 
       {/* Legend */}
       <div className="flex gap-3 mt-3 flex-wrap">
-        {!readOnly && (
-          <LegendDot color={selectionColor} label={t('grid.legend.selected')} />
-        )}
-        {allowedSet && (
-          <LegendDot color={OPEN_BG} label={t('grid.legend.shared')} bordered />
+        {(!readOnly || allowedSet) && (
+          <LegendDot
+            color={selectionColor}
+            label={!readOnly ? t('grid.legend.selected') : t('grid.legend.shared')}
+          />
         )}
         {maxHeat > 0 && (
           <LegendDot
@@ -271,9 +269,7 @@ export default function AvailabilityGrid({
             label={t('grid.legend.others')}
           />
         )}
-        {allowedSet && (
-          <LegendDot color={DISABLED_BG} label={t('grid.legend.unavailable')} dotOpacity={0.35} />
-        )}
+        <LegendDot color={EMPTY_BG} label={t('grid.legend.unavailable')} bordered />
       </div>
     </div>
   );
