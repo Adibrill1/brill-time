@@ -330,14 +330,6 @@ export default function JoinEvent() {
               </div>
             )}
 
-            {!isDeadlinePassed && stillNeeded === 0 && (
-              <div className="py-2 px-3 rounded-lg text-sm mb-2" style={{ backgroundColor: '#dcfce7', color: '#16a34a' }}>
-                {leadingSlot && !leadingSlot.cancelled
-                  ? t('join.done.leadingSlot', { slot: fmtSlot(leadingSlot, t), deadline: fmtDeadline(event.deadline_at, t) })
-                  : `🎉 ${t('join.done.enoughParticipants', { day: '', time: '' }).split(',')[0]}`}
-              </div>
-            )}
-
             {isPending && (
               <div className="py-2 px-3 rounded-lg text-sm" style={{ backgroundColor: '#eff6ff', color: '#1d4ed8' }}>
                 ⏳ {t('join.done.deciding')}
@@ -361,6 +353,11 @@ export default function JoinEvent() {
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
               </button>
+              {leadingSlot && !leadingSlot.cancelled && !isDeadlinePassed && (
+                <div className="px-4 pb-3 text-sm font-medium" style={{ color: '#16a34a' }}>
+                  {t('join.done.leadingSlot', { slot: fmtSlot(leadingSlot, t), deadline: fmtDeadline(event.deadline_at, t) })}
+                </div>
+              )}
               {heatmapOpen && (
                 <div className="px-4 pb-4">
                   <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('join.done.heatmapDesc')}</p>
