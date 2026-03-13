@@ -312,8 +312,6 @@ export default function OrganizerDash() {
                   startDate={startDate}
                   numDays={DAYS_TO_SHOW}
                   readOnly
-                  filterDisplayDays
-                  filterDisplayHours
                 />
               </div>
             )}
