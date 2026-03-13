@@ -175,8 +175,8 @@ export default function JoinEvent() {
     try {
       await fetch(`/api/events/${id}?action=decide`, { method: 'POST' });
     } catch {}
-    fetchEvent();
-  }, [id, fetchEvent]);
+    window.location.reload();
+  }, [id]);
 
   const doSubmit = async (slotsSet) => {
     setIsSubmitting(true);
@@ -278,6 +278,7 @@ export default function JoinEvent() {
         <div className="mb-4">
           <CountdownTimer
             deadlineAt={event.deadline_at}
+            onExpire={handleTimerExpire}
             winningSlotStart={event.winning_slot_start}
             winningSlotEnd={event.winning_slot_end}
             isPending={isPending}
