@@ -5,6 +5,18 @@ const START_HOUR = 7;
 const END_HOUR = 23; // slots: 7:00–22:00 (16 slots)
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
+// Fixed colors — identical in light & dark mode
+const DARK_BG = '#0f172a';      // slate-900: empty / blocked slots (black)
+const OPEN_BG = '#ffffff';      // white: organizer-allowed, no one picked yet
+
+// Heat gradient: blue-300 (תכלת, few) → blue-800 (כחול כהה, many)
+function heatColor(intensity) {
+  const r = Math.round(147 + (30  - 147) * intensity);
+  const g = Math.round(197 + (64  - 197) * intensity);
+  const b = Math.round(253 + (175 - 253) * intensity);
+  return `rgb(${r},${g},${b})`;
+}
+
 function getSlotStart(day, hour) {
   const d = new Date(day);
   d.setHours(hour, 0, 0, 0);
@@ -48,22 +60,24 @@ function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOn
   const heatCount = heat[slotStart] || 0;
   const intensity = maxHeat > 0 ? heatCount / maxHeat : 0;
 
+  // Not in organizer's allowed window → BLACK
   if (!isAllowed && allowedSet) {
-    return { bg: 'var(--color-grid-blocked)', cursor: readOnly ? 'default' : 'not-allowed' };
+    return { bg: DARK_BG, cursor: 'not-allowed' };
   }
+  // Current user's selection (white for organizer, blue for participant)
   if (isSelected) {
     return { bg: selectionColor, cursor: readOnly ? 'default' : 'pointer' };
   }
+  // Others picked this slot → light-blue (תכלת) to dark-blue gradient
   if (heatCount > 0) {
-    // Gradient from light (low count) to deep blue (highest count)
-    const alpha = 0.2 + intensity * 0.75;
-    return { bg: `rgba(37,99,235,${alpha.toFixed(2)})`, cursor: readOnly ? 'default' : 'pointer' };
+    return { bg: heatColor(intensity), cursor: readOnly ? 'default' : 'pointer' };
   }
+  // Organizer allowed this slot but no one picked it yet → WHITE
   if (isAllowed && allowedSet) {
-    // Organizer-allowed slots with no heat: neutral card background
-    return { bg: 'var(--color-card)', cursor: readOnly ? 'default' : 'pointer' };
+    return { bg: OPEN_BG, cursor: readOnly ? 'default' : 'pointer' };
   }
-  return { bg: 'var(--color-grid-empty)', cursor: readOnly ? 'default' : 'pointer' };
+  // No organizer restriction, empty → BLACK
+  return { bg: DARK_BG, cursor: readOnly ? 'default' : 'pointer' };
 }
 
 export default function AvailabilityGrid({
@@ -106,14 +120,13 @@ export default function AvailabilityGrid({
     ? ALL_HOURS.filter(h => days.some(d => hasActivity(d, h)))
     : ALL_HOURS;
 
-  // Show all days/hours if lean mode would produce empty grid
   const displayDays = activeDays.length > 0 ? activeDays : days;
   const displayHours = activeHours.length > 0 ? activeHours : ALL_HOURS;
 
   // Drag handling (mouse/stylus only — touch uses onClick)
   const isDraggingRef = useRef(false);
   const dragActionRef = useRef('select');
-  const dragStartedRef = useRef(false); // true when mouse drag started (skip onClick)
+  const dragStartedRef = useRef(false);
 
   const applyDrag = useCallback((slotStart) => {
     const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
@@ -128,13 +141,7 @@ export default function AvailabilityGrid({
     if (readOnly) return;
     const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
     if (!isAllowed) return;
-
-    // Touch: skip drag — let scroll work naturally, handle selection via onClick
-    if (e.pointerType === 'touch') {
-      dragStartedRef.current = false;
-      return;
-    }
-
+    if (e.pointerType === 'touch') { dragStartedRef.current = false; return; }
     e.preventDefault();
     dragStartedRef.current = true;
     isDraggingRef.current = true;
@@ -147,9 +154,8 @@ export default function AvailabilityGrid({
     applyDrag(slotStart);
   }, [readOnly, applyDrag]);
 
-  // Touch tap: toggle cell on tap (drag skipped for touch)
   const handleClick = useCallback((slotStart) => {
-    if (readOnly || dragStartedRef.current) return; // skip if mouse drag already handled it
+    if (readOnly || dragStartedRef.current) return;
     const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
     if (!isAllowed) return;
     const next = new Set(selectedSlots);
@@ -178,7 +184,7 @@ export default function AvailabilityGrid({
     return {
       backgroundColor: bg,
       cursor,
-      border: '1px solid var(--color-border)',
+      border: '1px solid rgba(255,255,255,0.07)',  // subtle fixed grid-line
       height: 28,
       touchAction: 'pan-y',
       userSelect: 'none',
@@ -189,13 +195,16 @@ export default function AvailabilityGrid({
   return (
     <div>
       <p className="text-xs mb-2" style={{ color: 'var(--color-muted)' }}>{hint}</p>
-      <div className="overflow-x-auto">
-        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <div className="overflow-x-auto rounded-lg overflow-hidden">
+        <table style={{ borderCollapse: 'collapse', width: '100%', backgroundColor: DARK_BG }}>
           <thead>
             <tr>
-              <th style={{ width: 36 }} />
+              <th style={{ width: 36, backgroundColor: DARK_BG }} />
               {displayDays.map((day, i) => (
-                <th key={i} style={{ textAlign: 'center', fontSize: 11, fontWeight: 500, paddingBottom: 4, minWidth: 34, color: 'var(--color-muted)' }}>
+                <th key={i} style={{
+                  textAlign: 'center', fontSize: 11, fontWeight: 500, paddingBottom: 4,
+                  minWidth: 34, color: '#94a3b8', backgroundColor: DARK_BG,
+                }}>
                   <div>{dayNames[day.getDay()]}</div>
                   <div>{day.getDate()}/{day.getMonth() + 1}</div>
                 </th>
@@ -205,7 +214,12 @@ export default function AvailabilityGrid({
           <tbody>
             {displayHours.map(hour => (
               <tr key={hour}>
-                <td style={{ fontSize: 11, paddingLeft: 0, paddingRight: 6, textAlign: 'right', whiteSpace: 'nowrap', color: 'var(--color-muted)', verticalAlign: 'middle' }}>
+                <td style={{
+                  fontSize: 11, paddingLeft: 0, paddingRight: 6,
+                  textAlign: 'right', whiteSpace: 'nowrap',
+                  color: '#94a3b8', verticalAlign: 'middle',
+                  backgroundColor: DARK_BG,
+                }}>
                   {String(hour).padStart(2, '0')}:00
                 </td>
                 {displayDays.map((day, di) => {
@@ -228,23 +242,34 @@ export default function AvailabilityGrid({
 
       {/* Legend */}
       <div className="flex gap-3 mt-3 flex-wrap">
-        <LegendDot color={selectionColor} label={t('grid.legend.selected')} bordered={isWhiteSelection} />
-        {allowedSet && <LegendDot color="var(--color-card)" label={t('grid.legend.shared')} bordered />}
-        {maxHeat > 0 && <LegendDot color="rgba(37,99,235,0.55)" label={t('grid.legend.others')} />}
+        {!readOnly && (
+          <LegendDot color={selectionColor} label={t('grid.legend.selected')} bordered={isWhiteSelection} />
+        )}
+        {allowedSet && <LegendDot color={OPEN_BG} label={t('grid.legend.shared')} bordered />}
+        {maxHeat > 0 && (
+          <LegendDot
+            gradient={['#93c5fd', '#1e40af']}
+            label={t('grid.legend.others')}
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function LegendDot({ color, label, bordered }) {
+function LegendDot({ color, gradient, label, bordered }) {
+  const bg = gradient
+    ? `linear-gradient(to right, ${gradient[0]}, ${gradient[1]})`
+    : color;
+  const isGradient = !!gradient;
   return (
     <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-muted)' }}>
       <div style={{
-        width: 14,
+        width: isGradient ? 28 : 14,
         height: 14,
         borderRadius: 3,
-        backgroundColor: color,
-        border: bordered ? '2px solid var(--color-border)' : '1px solid rgba(0,0,0,0.12)',
+        background: bg,
+        border: bordered ? '2px solid #94a3b8' : '1px solid rgba(0,0,0,0.15)',
         flexShrink: 0,
       }} />
       {label}
