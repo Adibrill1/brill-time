@@ -5,17 +5,16 @@ const START_HOUR = 7;
 const END_HOUR = 23; // slots: 7:00–22:00 (16 slots)
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
-// Fixed colors — identical in light & dark mode
-const DARK_BG = '#0f172a';      // slate-900: blocked / no organizer restriction → black
-const OPEN_BG = '#ffffff';      // white: organizer-allowed, nobody picked yet
+// Cell colors — fixed, independent of light/dark mode
+const OPEN_BG     = '#dbeafe';  // blue-100: organizer-allowed, nobody picked yet (shared time)
+const DISABLED_BG = '#94a3b8';  // slate-400: not in organizer's window → shown at opacity 0.35
 
-// Blue heat gradient: blue-300 → blue-900 (light = few, dark = many)
-// Used for ALL slots that others have picked, regardless of whether allowedSlots exist.
-// Green (selectionColor) always overrides this for the current user's own picks.
+// Blue heat gradient: #dbeafe (1 participant) → rgb(29,78,216) (max participants)
+// Green (selectionColor) always overrides heat for the current user's own picks.
 function heatColor(intensity) {
-  const r = Math.round(147 + (30  - 147) * intensity);
-  const g = Math.round(197 + (58  - 197) * intensity);
-  const b = Math.round(253 + (138 - 253) * intensity);
+  const r = Math.round(219 + (29  - 219) * intensity);
+  const g = Math.round(234 + (78  - 234) * intensity);
+  const b = Math.round(254 + (216 - 254) * intensity);
   return `rgb(${r},${g},${b})`;
 }
 
@@ -58,13 +57,13 @@ function buildHeatmap(existingAvailability, currentParticipantId) {
 
 function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor }) {
   const isSelected = selectedSlots.has(slotStart);
-  const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
-  const heatCount = heat[slotStart] || 0;
-  const intensity = maxHeat > 0 ? heatCount / maxHeat : 0;
+  const isAllowed  = allowedSet ? allowedSet.has(slotStart) : true;
+  const heatCount  = heat[slotStart] || 0;
+  const intensity  = maxHeat > 0 ? heatCount / maxHeat : 0;
 
-  // Not in organizer's allowed window → BLACK
+  // Disabled: not in organizer's allowed window → dimmed (opacity applied in cellStyle)
   if (!isAllowed && allowedSet) {
-    return { bg: DARK_BG, cursor: 'not-allowed' };
+    return { bg: DISABLED_BG, cursor: 'not-allowed', opacity: 0.35 };
   }
   // Current user's own pick → GREEN (always overrides everything else)
   if (isSelected) {
@@ -74,12 +73,12 @@ function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOn
   if (heatCount > 0) {
     return { bg: heatColor(intensity), cursor: readOnly ? 'default' : 'pointer' };
   }
-  // Organizer allowed this slot, nobody picked yet → WHITE
+  // Organizer allowed this slot, nobody picked yet → light blue (shared time)
   if (isAllowed && allowedSet) {
     return { bg: OPEN_BG, cursor: readOnly ? 'default' : 'pointer' };
   }
-  // No organizer restriction, empty → BLACK
-  return { bg: DARK_BG, cursor: readOnly ? 'default' : 'pointer' };
+  // No organizer restriction, empty → transparent (shows card background)
+  return { bg: 'transparent', cursor: readOnly ? 'default' : 'pointer' };
 }
 
 export default function AvailabilityGrid({
@@ -93,7 +92,7 @@ export default function AvailabilityGrid({
   numDays = 7,
   filterDisplayDays = false,
   filterDisplayHours = false,
-  selectionColor = '#22c55e',   // color for the current user's selected slots (green while picking)
+  selectionColor = '#22c55e',   // green while picking
 }) {
   const { t } = useTranslation();
 
@@ -122,13 +121,13 @@ export default function AvailabilityGrid({
     ? ALL_HOURS.filter(h => days.some(d => hasActivity(d, h)))
     : ALL_HOURS;
 
-  const displayDays = activeDays.length > 0 ? activeDays : days;
+  const displayDays  = activeDays.length  > 0 ? activeDays  : days;
   const displayHours = activeHours.length > 0 ? activeHours : ALL_HOURS;
 
   // Drag handling (mouse/stylus only — touch uses onClick)
-  const isDraggingRef = useRef(false);
-  const dragActionRef = useRef('select');
-  const dragStartedRef = useRef(false);
+  const isDraggingRef    = useRef(false);
+  const dragActionRef    = useRef('select');
+  const dragStartedRef   = useRef(false);
 
   const applyDrag = useCallback((slotStart) => {
     const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
@@ -146,8 +145,8 @@ export default function AvailabilityGrid({
     if (e.pointerType === 'touch') { dragStartedRef.current = false; return; }
     e.preventDefault();
     dragStartedRef.current = true;
-    isDraggingRef.current = true;
-    dragActionRef.current = selectedSlots.has(slotStart) ? 'deselect' : 'select';
+    isDraggingRef.current  = true;
+    dragActionRef.current  = selectedSlots.has(slotStart) ? 'deselect' : 'select';
     applyDrag(slotStart);
   }, [readOnly, allowedSet, selectedSlots, applyDrag]);
 
@@ -180,11 +179,12 @@ export default function AvailabilityGrid({
       : t('grid.hint.plain');
 
   const cellStyle = (slotStart) => {
-    const { bg, cursor } = getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor });
+    const { bg, cursor, opacity } = getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor });
     return {
       backgroundColor: bg,
       cursor,
-      border: '1px solid rgba(255,255,255,0.07)',  // subtle fixed grid-line
+      opacity: opacity ?? 1,
+      border: '1px solid rgba(0,0,0,0.08)',
       height: 28,
       touchAction: 'pan-y',
       userSelect: 'none',
@@ -192,18 +192,20 @@ export default function AvailabilityGrid({
     };
   };
 
+  const labelStyle = { color: '#94a3b8', backgroundColor: 'transparent' };
+
   return (
     <div>
       <p className="text-xs mb-2" style={{ color: 'var(--color-muted)' }}>{hint}</p>
       <div className="overflow-x-auto rounded-lg overflow-hidden">
-        <table style={{ borderCollapse: 'collapse', width: '100%', backgroundColor: DARK_BG }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', backgroundColor: 'transparent' }}>
           <thead>
             <tr>
-              <th style={{ width: 36, backgroundColor: DARK_BG }} />
+              <th style={{ width: 36, ...labelStyle }} />
               {displayDays.map((day, i) => (
                 <th key={i} style={{
                   textAlign: 'center', fontSize: 11, fontWeight: 500, paddingBottom: 4,
-                  minWidth: 34, color: '#94a3b8', backgroundColor: DARK_BG,
+                  minWidth: 34, ...labelStyle,
                 }}>
                   <div>{dayNames[day.getDay()]}</div>
                   <div>{day.getDate()}/{day.getMonth() + 1}</div>
@@ -217,8 +219,7 @@ export default function AvailabilityGrid({
                 <td style={{
                   fontSize: 11, paddingLeft: 0, paddingRight: 6,
                   textAlign: 'right', whiteSpace: 'nowrap',
-                  color: '#94a3b8', verticalAlign: 'middle',
-                  backgroundColor: DARK_BG,
+                  verticalAlign: 'middle', ...labelStyle,
                 }}>
                   {String(hour).padStart(2, '0')}:00
                 </td>
@@ -245,19 +246,24 @@ export default function AvailabilityGrid({
         {!readOnly && (
           <LegendDot color={selectionColor} label={t('grid.legend.selected')} />
         )}
-        {allowedSet && <LegendDot color={OPEN_BG} label={t('grid.legend.shared')} bordered />}
+        {allowedSet && (
+          <LegendDot color={OPEN_BG} label={t('grid.legend.shared')} bordered />
+        )}
         {maxHeat > 0 && (
           <LegendDot
-            gradient={['#93c5fd', '#1e3a8a']}
+            gradient={[OPEN_BG, 'rgb(29,78,216)']}
             label={t('grid.legend.others')}
           />
+        )}
+        {allowedSet && (
+          <LegendDot color={DISABLED_BG} label={t('grid.legend.unavailable')} dotOpacity={0.35} />
         )}
       </div>
     </div>
   );
 }
 
-function LegendDot({ color, gradient, label, bordered }) {
+function LegendDot({ color, gradient, label, bordered, dotOpacity }) {
   const bg = gradient
     ? `linear-gradient(to right, ${gradient[0]}, ${gradient[1]})`
     : color;
@@ -269,7 +275,8 @@ function LegendDot({ color, gradient, label, bordered }) {
         height: 14,
         borderRadius: 3,
         background: bg,
-        border: bordered ? '2px solid #94a3b8' : '1px solid rgba(0,0,0,0.15)',
+        border: bordered ? '1px solid #93c5fd' : '1px solid rgba(0,0,0,0.12)',
+        opacity: dotOpacity ?? 1,
         flexShrink: 0,
       }} />
       {label}
