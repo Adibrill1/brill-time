@@ -105,7 +105,7 @@ export default function AvailabilityGrid({
   numDays = 7,
   filterDisplayDays = false,
   filterDisplayHours = false,
-  selectionColor = '#2563eb',   // color for the current user's selected slots
+  selectionColor = '#22c55e',   // color for the current user's selected slots (green while picking)
 }) {
   const { t } = useTranslation();
 

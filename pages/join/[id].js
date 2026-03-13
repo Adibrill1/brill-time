@@ -342,10 +342,9 @@ export default function JoinEvent() {
                 <div className="px-4 pb-4">
                   <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('join.done.heatmapDesc')}</p>
                   <AvailabilityGrid
-                    selectedSlots={selectedSlots}
+                    selectedSlots={new Set()}
                     allowedSlots={organizer_slots?.length > 0 ? organizer_slots : null}
                     existingAvailability={availability}
-                    currentParticipantId={participantId}
                     startDate={startDate}
                     numDays={DAYS_TO_SHOW}
                     readOnly
