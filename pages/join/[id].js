@@ -114,6 +114,7 @@ export default function JoinEvent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isDeadlinePassed, setIsDeadlinePassed] = useState(false);
+  const [heatmapOpen, setHeatmapOpen] = useState(false);
 
   // Use event creation date as fixed anchor so every participant sees identical columns
   const startDate = (() => {
@@ -322,22 +323,38 @@ export default function JoinEvent() {
             )}
           </div>
 
-          {/* Heatmap */}
+          {/* Heatmap — collapsed by default */}
           {Object.keys(availability).length > 0 && (
-            <div className="rounded-xl p-4 mb-4" style={cardStyle}>
-              <div className="font-bold text-sm mb-1">{t('join.done.heatmapTitle')}</div>
-              <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('join.done.heatmapDesc')}</p>
-              <AvailabilityGrid
-                selectedSlots={selectedSlots}
-                allowedSlots={organizer_slots?.length > 0 ? organizer_slots : null}
-                existingAvailability={availability}
-                currentParticipantId={participantId}
-                startDate={startDate}
-                numDays={DAYS_TO_SHOW}
-                readOnly
-                filterDisplayDays
-                filterDisplayHours
-              />
+            <div className="rounded-xl mb-4 overflow-hidden" style={cardStyle}>
+              <button
+                onClick={() => setHeatmapOpen(o => !o)}
+                className="w-full flex items-center justify-between px-4 py-3 text-sm font-bold"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text)' }}
+              >
+                <span>{t('join.done.heatmapTitle')}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ flexShrink: 0, transition: 'transform 0.2s', transform: heatmapOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              {heatmapOpen && (
+                <div className="px-4 pb-4">
+                  <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('join.done.heatmapDesc')}</p>
+                  <AvailabilityGrid
+                    selectedSlots={selectedSlots}
+                    allowedSlots={organizer_slots?.length > 0 ? organizer_slots : null}
+                    existingAvailability={availability}
+                    currentParticipantId={participantId}
+                    startDate={startDate}
+                    numDays={DAYS_TO_SHOW}
+                    readOnly
+                    filterDisplayDays
+                    filterDisplayHours
+                  />
+                </div>
+              )}
             </div>
           )}
 
