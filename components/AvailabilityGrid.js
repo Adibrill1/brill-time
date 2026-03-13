@@ -257,19 +257,10 @@ export default function AvailabilityGrid({
 
       {/* Legend */}
       <div className="flex gap-3 mt-3 flex-wrap">
-        {(!readOnly || allowedSet) && (
-          <LegendDot
-            color={selectionColor}
-            label={!readOnly ? t('grid.legend.selected') : t('grid.legend.shared')}
-          />
-        )}
-        {maxHeat > 0 && (
-          <LegendDot
-            gradient={HEAT_STOPS.map(([r, g, b]) => `rgb(${r},${g},${b})`)}
-            label={t('grid.legend.others')}
-          />
-        )}
         <LegendDot color={EMPTY_BG} label={t('grid.legend.unavailable')} bordered />
+        {maxHeat > 0 && (
+          <LegendDot color={`rgb(${HEAT_STOPS[2].join(',')})`} label={t('grid.legend.others')} />
+        )}
       </div>
     </div>
   );
