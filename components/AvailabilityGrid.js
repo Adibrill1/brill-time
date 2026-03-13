@@ -7,7 +7,7 @@ const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_
 
 // Cell colors — fixed, independent of light/dark mode
 const OPEN_BG  = '#9ac0ff';  // light blue: organizer-allowed / user's own selection
-const EMPTY_BG = '#d6e5ff';  // light blue-gray: nobody selected this slot
+const EMPTY_BG = '#0f172a';  // dark navy: nobody selected this slot (any empty cell)
 
 // 3-stop heat gradient (all blue shades):
 //   #9ac0ff (low demand) → #739ee7 (moderate) → #1e3a8a (highest demand)
@@ -255,6 +255,13 @@ export default function AvailabilityGrid({
         </table>
       </div>
 
+      {/* Legend */}
+      <div className="flex gap-3 mt-3 flex-wrap">
+        <LegendDot color={EMPTY_BG} label={t('grid.legend.unavailable')} bordered />
+        {maxHeat > 0 && (
+          <LegendDot color={`rgb(${HEAT_STOPS[2].join(',')})`} label={t('grid.legend.others')} />
+        )}
+      </div>
     </div>
   );
 }
