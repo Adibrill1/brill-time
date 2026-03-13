@@ -161,14 +161,13 @@ export default function JoinEvent() {
     if (p && p.name) setName(p.name);
   }, [eventData, participantId]);
 
-  // Poll when pending (deadline passed but no winner yet)
+  // Poll while on the done screen and event is still open:
+  // picks up new submissions from other participants and auto-transitions when decided/cancelled
   useEffect(() => {
-    if (!eventData) return;
-    const isPending = isDeadlinePassed && !eventData.event.winning_slot_start && eventData.event.status === 'open';
-    if (!isPending) return;
+    if (!eventData || eventData.event.status !== 'open' || phase !== 'done') return;
     const interval = setInterval(fetchEvent, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [eventData, isDeadlinePassed, fetchEvent]);
+  }, [eventData, phase, fetchEvent]);
 
   const handleTimerExpire = useCallback(async () => {
     if (!id) return;
