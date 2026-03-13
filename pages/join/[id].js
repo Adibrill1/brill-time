@@ -253,6 +253,8 @@ export default function JoinEvent() {
 
   const { event, participants, availability, organizer_slots } = eventData;
   const isPending = isDeadlinePassed && !event.winning_slot_start && event.status === 'open';
+  // Exclude the organizer from heat so their allowed slots stay white, not blue
+  const organizerParticipantId = participants.find(p => p.is_organizer)?.id ?? null;
 
   const cardStyle = { backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' };
 
@@ -366,6 +368,7 @@ export default function JoinEvent() {
                     selectedSlots={new Set()}
                     allowedSlots={organizer_slots?.length > 0 ? organizer_slots : null}
                     existingAvailability={availability}
+                    currentParticipantId={organizerParticipantId}
                     startDate={startDate}
                     numDays={DAYS_TO_SHOW}
                     readOnly
