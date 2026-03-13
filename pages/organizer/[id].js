@@ -8,6 +8,7 @@ import { useTranslation } from '../../lib/useTranslation';
 import { findWinningSlot } from '../../lib/algorithm';
 
 const DAYS_TO_SHOW = 7;
+const POLL_INTERVAL = 5000;
 
 function fmtSlot(slot, t) {
   const start = new Date(slot.slot_start);
@@ -37,6 +38,7 @@ export default function OrganizerDash() {
   const [saveError, setSaveError] = useState('');
   const [hasSaved, setHasSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isDeadlinePassed, setIsDeadlinePassed] = useState(false);
 
   // Use event creation date as fixed anchor so every participant sees identical columns
   const startDate = (() => {
@@ -52,6 +54,7 @@ export default function OrganizerDash() {
       if (!res.ok) return;
       const data = await res.json();
       setEventData(data);
+      setIsDeadlinePassed(Date.now() > data.event.deadline_at);
     } catch (e) {
       console.error(e);
     } finally {
@@ -101,6 +104,22 @@ export default function OrganizerDash() {
     }
   }, [eventData, organizerParticipantId]);
 
+  // Poll every 5s while event is open (picks up new submissions + auto-transitions on decision)
+  useEffect(() => {
+    if (!eventData || eventData.event.status !== 'open') return;
+    const interval = setInterval(fetchEvent, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [eventData, fetchEvent]);
+
+  const handleTimerExpire = useCallback(async () => {
+    if (!id) return;
+    setIsDeadlinePassed(true);
+    try {
+      await fetch(`/api/events/${id}?action=decide`, { method: 'POST' });
+    } catch {}
+    window.location.reload();
+  }, [id]);
+
   const handleSaveAvailability = async () => {
     if (!organizerParticipantId) return;
     setIsSaving(true);
@@ -142,6 +161,7 @@ export default function OrganizerDash() {
   }
 
   const { event, participants, availability, organizer_slots } = eventData;
+  const isPending = isDeadlinePassed && !event.winning_slot_start && event.status === 'open';
   const nonOrganizerParticipants = participants.filter(p => !p.is_organizer);
   const submitted = nonOrganizerParticipants.filter(p => availability[p.id]);
   const minNeeded = event.min_participants || 2;
@@ -172,8 +192,10 @@ export default function OrganizerDash() {
           </div>
           <CountdownTimer
             deadlineAt={event.deadline_at}
+            onExpire={handleTimerExpire}
             winningSlotStart={event.winning_slot_start}
             winningSlotEnd={event.winning_slot_end}
+            isPending={isPending}
           />
         </div>
 
