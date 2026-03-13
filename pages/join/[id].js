@@ -357,8 +357,6 @@ export default function JoinEvent() {
                     startDate={startDate}
                     numDays={DAYS_TO_SHOW}
                     readOnly
-                    filterDisplayDays
-                    filterDisplayHours
                   />
                 </div>
               )}
