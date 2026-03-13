@@ -42,28 +42,28 @@ function buildHeatmap(existingAvailability, currentParticipantId) {
   return { heat, maxHeat };
 }
 
-function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly }) {
+function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor }) {
   const isSelected = selectedSlots.has(slotStart);
   const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
   const heatCount = heat[slotStart] || 0;
   const intensity = maxHeat > 0 ? heatCount / maxHeat : 0;
 
   if (!isAllowed && allowedSet) {
-    return { bg: 'var(--color-grid-blocked)', cursor: readOnly ? 'default' : 'not-allowed', opacity: 1 };
+    return { bg: 'var(--color-grid-blocked)', cursor: readOnly ? 'default' : 'not-allowed' };
   }
   if (isSelected) {
-    return { bg: '#2563eb', cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
+    return { bg: selectionColor, cursor: readOnly ? 'default' : 'pointer' };
   }
   if (heatCount > 0) {
-    // Gradient from light sky blue (low) to deep blue (high)
+    // Gradient from light (low count) to deep blue (highest count)
     const alpha = 0.2 + intensity * 0.75;
-    return { bg: `rgba(37,99,235,${alpha.toFixed(2)})`, cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
+    return { bg: `rgba(37,99,235,${alpha.toFixed(2)})`, cursor: readOnly ? 'default' : 'pointer' };
   }
   if (isAllowed && allowedSet) {
-    // Allowed slots with no heat: use card background (neutral, not tinted)
-    return { bg: 'var(--color-card)', cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
+    // Organizer-allowed slots with no heat: neutral card background
+    return { bg: 'var(--color-card)', cursor: readOnly ? 'default' : 'pointer' };
   }
-  return { bg: 'var(--color-grid-empty)', cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
+  return { bg: 'var(--color-grid-empty)', cursor: readOnly ? 'default' : 'pointer' };
 }
 
 export default function AvailabilityGrid({
@@ -77,6 +77,7 @@ export default function AvailabilityGrid({
   numDays = 7,
   filterDisplayDays = false,
   filterDisplayHours = false,
+  selectionColor = '#2563eb',   // color for the current user's selected slots
 }) {
   const { t } = useTranslation();
 
@@ -112,7 +113,7 @@ export default function AvailabilityGrid({
   // Drag handling (mouse/stylus only — touch uses onClick)
   const isDraggingRef = useRef(false);
   const dragActionRef = useRef('select');
-  const dragStartedRef = useRef(false); // true when mouse drag is active (skip onClick)
+  const dragStartedRef = useRef(false); // true when mouse drag started (skip onClick)
 
   const applyDrag = useCallback((slotStart) => {
     const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
@@ -146,7 +147,7 @@ export default function AvailabilityGrid({
     applyDrag(slotStart);
   }, [readOnly, applyDrag]);
 
-  // Touch tap handler: toggle cell on tap (drag skipped for touch)
+  // Touch tap: toggle cell on tap (drag skipped for touch)
   const handleClick = useCallback((slotStart) => {
     if (readOnly || dragStartedRef.current) return; // skip if mouse drag already handled it
     const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
@@ -170,14 +171,16 @@ export default function AvailabilityGrid({
       ? t('grid.hint.heatmap')
       : t('grid.hint.plain');
 
+  const isWhiteSelection = selectionColor === '#ffffff';
+
   const cellStyle = (slotStart) => {
-    const { bg, cursor } = getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly });
+    const { bg, cursor } = getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor });
     return {
       backgroundColor: bg,
       cursor,
       border: '1px solid var(--color-border)',
       height: 28,
-      touchAction: 'pan-y', // allow vertical page scrolling on touch
+      touchAction: 'pan-y',
       userSelect: 'none',
       transition: 'background-color 0.07s',
     };
@@ -225,7 +228,7 @@ export default function AvailabilityGrid({
 
       {/* Legend */}
       <div className="flex gap-3 mt-3 flex-wrap">
-        <LegendDot color="#2563eb" label={t('grid.legend.selected')} />
+        <LegendDot color={selectionColor} label={t('grid.legend.selected')} bordered={isWhiteSelection} />
         {allowedSet && <LegendDot color="var(--color-card)" label={t('grid.legend.shared')} bordered />}
         {maxHeat > 0 && <LegendDot color="rgba(37,99,235,0.55)" label={t('grid.legend.others')} />}
       </div>

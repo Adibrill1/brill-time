@@ -190,6 +190,7 @@ export default function OrganizerDash() {
                 currentParticipantId={organizerParticipantId}
                 startDate={startDate}
                 numDays={DAYS_TO_SHOW}
+                selectionColor="#ffffff"
               />
               {saveError && (
                 <p className="text-xs mt-2" style={{ color: '#dc2626' }}>{saveError}</p>
