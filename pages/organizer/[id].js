@@ -150,35 +150,6 @@ export default function OrganizerDash() {
           />
         </div>
 
-        {/* Join link */}
-        <div className="rounded-xl p-4 mb-4" style={cardStyle}>
-          <div className="font-bold text-sm mb-1">{t('organizer.joinLink.title')}</div>
-          <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('organizer.joinLink.desc')}</p>
-          <div className="flex gap-2 items-center">
-            <input
-              readOnly
-              value={typeof window !== 'undefined' ? `${window.location.origin}/join/${id}` : `/join/${id}`}
-              className="flex-1 px-3 py-2 rounded-lg text-xs"
-              style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-muted)' }}
-            />
-            <button
-              onClick={handleCopyLink}
-              className="px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap"
-              style={{ backgroundColor: copied ? '#dcfce7' : '#eff6ff', color: copied ? '#16a34a' : '#2563eb', border: '1px solid var(--color-border)' }}
-            >
-              {copied ? t('organizer.joinLink.copied') : t('organizer.joinLink.copyBtn')}
-            </button>
-          </div>
-        </div>
-
-        {/* Participant count */}
-        {nonOrganizerParticipants.length > 0 && (
-          <div className="rounded-xl p-4 mb-4 text-sm" style={cardStyle}>
-            <span className="font-medium">{submitted.length}/{nonOrganizerParticipants.length}</span>
-            <span style={{ color: 'var(--color-muted)' }}> {t('grid.participants')} {t('join.done.countSuffix')}</span>
-          </div>
-        )}
-
         {/* Organizer availability section — collapsed by default */}
         <div className="rounded-xl mb-4 overflow-hidden" style={cardStyle}>
           <button
@@ -233,6 +204,35 @@ export default function OrganizerDash() {
             </div>
           )}
         </div>
+
+        {/* Join link */}
+        <div className="rounded-xl p-4 mb-4" style={cardStyle}>
+          <div className="font-bold text-sm mb-1">{t('organizer.joinLink.title')}</div>
+          <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('organizer.joinLink.desc')}</p>
+          <div className="flex gap-2 items-center">
+            <input
+              readOnly
+              value={typeof window !== 'undefined' ? `${window.location.origin}/join/${id}` : `/join/${id}`}
+              className="flex-1 px-3 py-2 rounded-lg text-xs"
+              style={{ backgroundColor: 'var(--color-bg)', border: '1px solid var(--color-border)', color: 'var(--color-muted)' }}
+            />
+            <button
+              onClick={handleCopyLink}
+              className="px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap"
+              style={{ backgroundColor: copied ? '#dcfce7' : '#eff6ff', color: copied ? '#16a34a' : '#2563eb', border: '1px solid var(--color-border)' }}
+            >
+              {copied ? t('organizer.joinLink.copied') : t('organizer.joinLink.copyBtn')}
+            </button>
+          </div>
+        </div>
+
+        {/* Participant count */}
+        {nonOrganizerParticipants.length > 0 && (
+          <div className="rounded-xl p-4 mb-4 text-sm" style={cardStyle}>
+            <span className="font-medium">{submitted.length}/{nonOrganizerParticipants.length}</span>
+            <span style={{ color: 'var(--color-muted)' }}> {t('grid.participants')} {t('join.done.countSuffix')}</span>
+          </div>
+        )}
 
         {/* Heatmap of all participants (read-only) */}
         {Object.keys(availability).length > 0 && (
