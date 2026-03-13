@@ -9,20 +9,20 @@ const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_
 const DARK_BG = '#0f172a';      // slate-900: empty / blocked slots (black)
 const OPEN_BG = '#ffffff';      // white: organizer-allowed, no one picked yet
 
-// Heat gradient when organizer set allowed slots: white → blue-500
+// Heat gradient when organizer set allowed slots: white → blue-900
 // (allowed slots stay light/white-based so they stay visually distinct from blocked black)
 function heatColorOnWhite(intensity) {
-  const r = Math.round(255 + (59  - 255) * intensity);
-  const g = Math.round(255 + (130 - 255) * intensity);
-  const b = Math.round(255 + (246 - 255) * intensity);
+  const r = Math.round(255 + (30  - 255) * intensity);
+  const g = Math.round(255 + (58  - 255) * intensity);
+  const b = Math.round(255 + (138 - 255) * intensity);
   return `rgb(${r},${g},${b})`;
 }
 
-// Heat gradient when no organizer restriction: blue-300 (תכלת) → blue-800 (כחול כהה)
+// Heat gradient when no organizer restriction: blue-300 (תכלת) → blue-900 (כחול כהה מאוד)
 function heatColor(intensity) {
   const r = Math.round(147 + (30  - 147) * intensity);
-  const g = Math.round(197 + (64  - 197) * intensity);
-  const b = Math.round(253 + (175 - 253) * intensity);
+  const g = Math.round(197 + (58  - 197) * intensity);
+  const b = Math.round(253 + (138 - 253) * intensity);
   return `rgb(${r},${g},${b})`;
 }
 
@@ -262,7 +262,7 @@ export default function AvailabilityGrid({
         {allowedSet && <LegendDot color={OPEN_BG} label={t('grid.legend.shared')} bordered />}
         {maxHeat > 0 && (
           <LegendDot
-            gradient={allowedSet ? ['#ffffff', '#3b82f6'] : ['#93c5fd', '#1e40af']}
+            gradient={allowedSet ? ['#ffffff', '#1e3a8a'] : ['#93c5fd', '#1e3a8a']}
             label={t('grid.legend.others')}
             bordered={!!allowedSet}
           />

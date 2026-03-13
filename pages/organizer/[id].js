@@ -17,6 +17,7 @@ export default function OrganizerDash() {
   const [loading, setLoading] = useState(true);
   const [organizerParticipantId, setOrganizerParticipantId] = useState(null);
   const [gridOpen, setGridOpen] = useState(false); // collapsed by default
+  const [heatmapOpen, setHeatmapOpen] = useState(false); // collapsed by default
   const [selectedSlots, setSelectedSlots] = useState(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -240,21 +241,34 @@ export default function OrganizerDash() {
           </div>
         )}
 
-        {/* Heatmap of all participants (read-only) */}
+        {/* Heatmap of all participants (read-only) — collapsible */}
         {Object.keys(availability).length > 0 && (
-          <div className="rounded-xl p-4" style={cardStyle}>
-            <div className="font-bold text-sm mb-3">{t('join.done.heatmapTitle')}</div>
-            <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('join.done.heatmapDesc')}</p>
-            <AvailabilityGrid
-              selectedSlots={new Set()}
-              allowedSlots={organizer_slots?.length > 0 ? organizer_slots : null}
-              existingAvailability={availability}
-              startDate={startDate}
-              numDays={DAYS_TO_SHOW}
-              readOnly
-              filterDisplayDays
-              filterDisplayHours
-            />
+          <div className="rounded-xl" style={cardStyle}>
+            <button
+              className="w-full flex items-center justify-between p-4 text-sm font-bold"
+              onClick={() => setHeatmapOpen(o => !o)}
+            >
+              <span>{t('join.done.heatmapTitle')}</span>
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"
+                style={{ flexShrink: 0, transition: 'transform 0.2s', transform: heatmapOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+              </svg>
+            </button>
+            {heatmapOpen && (
+              <div className="px-4 pb-4">
+                <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('join.done.heatmapDesc')}</p>
+                <AvailabilityGrid
+                  selectedSlots={new Set()}
+                  allowedSlots={organizer_slots?.length > 0 ? organizer_slots : null}
+                  existingAvailability={availability}
+                  startDate={startDate}
+                  numDays={DAYS_TO_SHOW}
+                  readOnly
+                  filterDisplayDays
+                  filterDisplayHours
+                />
+              </div>
+            )}
           </div>
         )}
       </motion.div>
