@@ -6,13 +6,16 @@ const END_HOUR = 23; // slots: 7:00–22:00 (16 slots)
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
 // Cell colors — fixed, independent of light/dark mode
-const OPEN_BG  = '#9ac0ff';  // light blue: organizer-allowed / user's own selection
-const EMPTY_BG = '#0f172a';  // dark navy: nobody selected this slot (any empty cell)
+// Stripe pattern: vertical #ffffff / #d6e5ff lines — "אף אחד לא בחר"
+const STRIPE_BG = 'repeating-linear-gradient(90deg, #d6e5ff 0, #d6e5ff 7px, #ffffff 7px, #ffffff 11px)';
+const OPEN_BG   = STRIPE_BG;   // organizer-allowed, nobody picked yet
+const EMPTY_BG  = STRIPE_BG;   // no restriction, nobody selected
+const BLOCKED_BG = '#d6e5ff';  // outside organizer's window (solid, distinct from stripes)
 
 // 3-stop heat gradient (all blue shades):
-//   #9ac0ff (low demand) → #739ee7 (moderate) → #1e3a8a (highest demand)
+//   #d6e5ff (low demand) → #739ee7 (moderate) → #1e3a8a (highest demand)
 const HEAT_STOPS = [
-  [154, 192, 255],   // #9ac0ff — light blue  (1 participant, מעט ביקוש)
+  [214, 229, 255],   // #d6e5ff — light blue  (1 participant, מעט ביקוש)
   [115, 158, 231],   // #739ee7 — medium blue (mid,           יותר מתאים)
   [ 30,  58, 138],   // #1e3a8a — dark navy   (max,           כרגע הכי מתאים)
 ];
@@ -76,9 +79,9 @@ function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOn
   const heatCount  = heat[slotStart] || 0;
   const intensity  = maxHeat > 0 ? heatCount / maxHeat : 0;
 
-  // Not in organizer's window → dark (blocked)
+  // Not in organizer's window → solid light blue (distinct from striped empty)
   if (!isAllowed && allowedSet) {
-    return { bg: EMPTY_BG, cursor: 'not-allowed' };
+    return { bg: BLOCKED_BG, cursor: 'not-allowed' };
   }
   // User's own pick → light blue (same as organizer's marker)
   if (isSelected) {
@@ -107,7 +110,7 @@ export default function AvailabilityGrid({
   numDays = 7,
   filterDisplayDays = false,
   filterDisplayHours = false,
-  selectionColor = '#9ac0ff',   // light blue: my selection / organizer's marker
+  selectionColor = '#d6e5ff',   // light blue: my selection (matches low-demand heat start)
 }) {
   const { t } = useTranslation();
 
@@ -196,7 +199,7 @@ export default function AvailabilityGrid({
   const cellStyle = (slotStart) => {
     const { bg, cursor } = getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor });
     return {
-      backgroundColor: bg,
+      background: bg,
       cursor,
       border: '1px solid rgba(255,255,255,0.08)',
       height: 28,
@@ -257,7 +260,7 @@ export default function AvailabilityGrid({
 
       {/* Legend */}
       <div className="flex gap-3 mt-3 flex-wrap">
-        <LegendDot color={EMPTY_BG} label={t('grid.legend.unavailable')} bordered />
+        <LegendDot cssBackground={STRIPE_BG} label={t('grid.legend.unavailable')} />
         {maxHeat > 0 && (
           <LegendDot color={`rgb(${HEAT_STOPS[2].join(',')})`} label={t('grid.legend.others')} />
         )}
@@ -266,15 +269,14 @@ export default function AvailabilityGrid({
   );
 }
 
-function LegendDot({ color, gradient, label, bordered, dotOpacity }) {
-  const bg = gradient
-    ? `linear-gradient(to right, ${gradient.join(', ')})`
-    : color;
-  const isGradient = !!gradient;
+function LegendDot({ color, gradient, cssBackground, label, bordered, dotOpacity }) {
+  const bg = cssBackground
+    ?? (gradient ? `linear-gradient(to right, ${gradient.join(', ')})` : color);
+  const isWide = !!(gradient || cssBackground);
   return (
     <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-muted)' }}>
       <div style={{
-        width: isGradient ? 28 : 14,
+        width: isWide ? 28 : 14,
         height: 14,
         borderRadius: 3,
         background: bg,
