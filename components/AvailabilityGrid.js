@@ -9,12 +9,28 @@ const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_
 const OPEN_BG     = '#dbeafe';  // blue-100: organizer-allowed, nobody picked yet (shared time)
 const DISABLED_BG = '#94a3b8';  // slate-400: not in organizer's window → shown at opacity 0.35
 
-// Blue heat gradient: #dbeafe (1 participant) → rgb(29,78,216) (max participants)
+// 3-stop heat gradient: blue-periwinkle → warm gray → amber orange
+// Matches the diverging heatmap palette (low = blue, mid = gray, high = orange).
 // Green (selectionColor) always overrides heat for the current user's own picks.
+const HEAT_STOPS = [
+  [110, 135, 215],   // blue-periwinkle  (1 participant)
+  [160, 148, 132],   // warm gray        (mid)
+  [242, 160, 28],    // amber orange     (max participants)
+];
+
 function heatColor(intensity) {
-  const r = Math.round(219 + (29  - 219) * intensity);
-  const g = Math.round(234 + (78  - 234) * intensity);
-  const b = Math.round(254 + (216 - 254) * intensity);
+  let r, g, b;
+  if (intensity <= 0.5) {
+    const t = intensity * 2;
+    r = Math.round(HEAT_STOPS[0][0] + (HEAT_STOPS[1][0] - HEAT_STOPS[0][0]) * t);
+    g = Math.round(HEAT_STOPS[0][1] + (HEAT_STOPS[1][1] - HEAT_STOPS[0][1]) * t);
+    b = Math.round(HEAT_STOPS[0][2] + (HEAT_STOPS[1][2] - HEAT_STOPS[0][2]) * t);
+  } else {
+    const t = (intensity - 0.5) * 2;
+    r = Math.round(HEAT_STOPS[1][0] + (HEAT_STOPS[2][0] - HEAT_STOPS[1][0]) * t);
+    g = Math.round(HEAT_STOPS[1][1] + (HEAT_STOPS[2][1] - HEAT_STOPS[1][1]) * t);
+    b = Math.round(HEAT_STOPS[1][2] + (HEAT_STOPS[2][2] - HEAT_STOPS[1][2]) * t);
+  }
   return `rgb(${r},${g},${b})`;
 }
 
@@ -251,7 +267,7 @@ export default function AvailabilityGrid({
         )}
         {maxHeat > 0 && (
           <LegendDot
-            gradient={[OPEN_BG, 'rgb(29,78,216)']}
+            gradient={HEAT_STOPS.map(([r, g, b]) => `rgb(${r},${g},${b})`)}
             label={t('grid.legend.others')}
           />
         )}
@@ -265,7 +281,7 @@ export default function AvailabilityGrid({
 
 function LegendDot({ color, gradient, label, bordered, dotOpacity }) {
   const bg = gradient
-    ? `linear-gradient(to right, ${gradient[0]}, ${gradient[1]})`
+    ? `linear-gradient(to right, ${gradient.join(', ')})`
     : color;
   const isGradient = !!gradient;
   return (
