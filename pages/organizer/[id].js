@@ -98,6 +98,7 @@ export default function OrganizerDash() {
       });
       if (!res.ok) throw new Error('Save failed');
       setHasSaved(true);
+      setGridOpen(false);
       await fetchEvent();
     } catch (e) {
       setSaveError(e.message);

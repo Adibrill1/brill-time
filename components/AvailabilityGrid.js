@@ -55,11 +55,13 @@ function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOn
     return { bg: '#2563eb', cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
   }
   if (heatCount > 0) {
-    const alpha = 0.18 + intensity * 0.55;
-    return { bg: `rgba(59,130,246,${alpha.toFixed(2)})`, cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
+    // Gradient from light sky blue (low) to deep blue (high)
+    const alpha = 0.2 + intensity * 0.75;
+    return { bg: `rgba(37,99,235,${alpha.toFixed(2)})`, cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
   }
   if (isAllowed && allowedSet) {
-    return { bg: 'rgba(186,230,253,0.45)', cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
+    // Allowed slots with no heat: use card background (neutral, not tinted)
+    return { bg: 'var(--color-card)', cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
   }
   return { bg: 'var(--color-grid-empty)', cursor: readOnly ? 'default' : 'pointer', opacity: 1 };
 }
@@ -107,9 +109,10 @@ export default function AvailabilityGrid({
   const displayDays = activeDays.length > 0 ? activeDays : days;
   const displayHours = activeHours.length > 0 ? activeHours : ALL_HOURS;
 
-  // Drag handling
+  // Drag handling (mouse/stylus only — touch uses onClick)
   const isDraggingRef = useRef(false);
   const dragActionRef = useRef('select');
+  const dragStartedRef = useRef(false); // true when mouse drag is active (skip onClick)
 
   const applyDrag = useCallback((slotStart) => {
     const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
@@ -124,7 +127,15 @@ export default function AvailabilityGrid({
     if (readOnly) return;
     const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
     if (!isAllowed) return;
+
+    // Touch: skip drag — let scroll work naturally, handle selection via onClick
+    if (e.pointerType === 'touch') {
+      dragStartedRef.current = false;
+      return;
+    }
+
     e.preventDefault();
+    dragStartedRef.current = true;
     isDraggingRef.current = true;
     dragActionRef.current = selectedSlots.has(slotStart) ? 'deselect' : 'select';
     applyDrag(slotStart);
@@ -134,6 +145,17 @@ export default function AvailabilityGrid({
     if (!isDraggingRef.current || readOnly) return;
     applyDrag(slotStart);
   }, [readOnly, applyDrag]);
+
+  // Touch tap handler: toggle cell on tap (drag skipped for touch)
+  const handleClick = useCallback((slotStart) => {
+    if (readOnly || dragStartedRef.current) return; // skip if mouse drag already handled it
+    const isAllowed = allowedSet ? allowedSet.has(slotStart) : true;
+    if (!isAllowed) return;
+    const next = new Set(selectedSlots);
+    if (next.has(slotStart)) next.delete(slotStart);
+    else next.add(slotStart);
+    onSlotsChange?.(next);
+  }, [readOnly, allowedSet, selectedSlots, onSlotsChange]);
 
   useEffect(() => {
     const up = () => { isDraggingRef.current = false; };
@@ -155,7 +177,7 @@ export default function AvailabilityGrid({
       cursor,
       border: '1px solid var(--color-border)',
       height: 28,
-      touchAction: 'none',
+      touchAction: 'pan-y', // allow vertical page scrolling on touch
       userSelect: 'none',
       transition: 'background-color 0.07s',
     };
@@ -191,6 +213,7 @@ export default function AvailabilityGrid({
                       style={cellStyle(slotStart)}
                       onPointerDown={e => handlePointerDown(slotStart, e)}
                       onPointerEnter={() => handlePointerEnter(slotStart)}
+                      onClick={() => handleClick(slotStart)}
                     />
                   );
                 })}
@@ -203,17 +226,24 @@ export default function AvailabilityGrid({
       {/* Legend */}
       <div className="flex gap-3 mt-3 flex-wrap">
         <LegendDot color="#2563eb" label={t('grid.legend.selected')} />
-        {allowedSet && <LegendDot color="rgba(186,230,253,0.8)" label={t('grid.legend.shared')} />}
-        {maxHeat > 0 && <LegendDot color="rgba(59,130,246,0.5)" label={t('grid.legend.others')} />}
+        {allowedSet && <LegendDot color="var(--color-card)" label={t('grid.legend.shared')} bordered />}
+        {maxHeat > 0 && <LegendDot color="rgba(37,99,235,0.55)" label={t('grid.legend.others')} />}
       </div>
     </div>
   );
 }
 
-function LegendDot({ color, label }) {
+function LegendDot({ color, label, bordered }) {
   return (
     <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-muted)' }}>
-      <div style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: color, border: '1px solid rgba(0,0,0,0.12)', flexShrink: 0 }} />
+      <div style={{
+        width: 14,
+        height: 14,
+        borderRadius: 3,
+        backgroundColor: color,
+        border: bordered ? '2px solid var(--color-border)' : '1px solid rgba(0,0,0,0.12)',
+        flexShrink: 0,
+      }} />
       {label}
     </div>
   );
