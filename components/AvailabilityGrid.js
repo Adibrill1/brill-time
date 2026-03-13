@@ -6,19 +6,12 @@ const END_HOUR = 23; // slots: 7:00–22:00 (16 slots)
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
 // Fixed colors — identical in light & dark mode
-const DARK_BG = '#0f172a';      // slate-900: empty / blocked slots (black)
-const OPEN_BG = '#ffffff';      // white: organizer-allowed, no one picked yet
+const DARK_BG = '#0f172a';      // slate-900: blocked / no organizer restriction → black
+const OPEN_BG = '#ffffff';      // white: organizer-allowed, nobody picked yet
 
-// Heat gradient when organizer set allowed slots: white → blue-900
-// (allowed slots stay light/white-based so they stay visually distinct from blocked black)
-function heatColorOnWhite(intensity) {
-  const r = Math.round(255 + (30  - 255) * intensity);
-  const g = Math.round(255 + (58  - 255) * intensity);
-  const b = Math.round(255 + (138 - 255) * intensity);
-  return `rgb(${r},${g},${b})`;
-}
-
-// Heat gradient when no organizer restriction: blue-300 (תכלת) → blue-900 (כחול כהה מאוד)
+// Blue heat gradient: blue-300 → blue-900 (light = few, dark = many)
+// Used for ALL slots that others have picked, regardless of whether allowedSlots exist.
+// Green (selectionColor) always overrides this for the current user's own picks.
 function heatColor(intensity) {
   const r = Math.round(147 + (30  - 147) * intensity);
   const g = Math.round(197 + (58  - 197) * intensity);
@@ -73,20 +66,15 @@ function getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOn
   if (!isAllowed && allowedSet) {
     return { bg: DARK_BG, cursor: 'not-allowed' };
   }
-  // Current user's selection (white for organizer, blue for participant)
+  // Current user's own pick → GREEN (always overrides everything else)
   if (isSelected) {
     return { bg: selectionColor, cursor: readOnly ? 'default' : 'pointer' };
   }
-  // Organizer-allowed slot with heat → white → blue-500 gradient
-  // (stays light so allowed slots always read as "white" vs blocked "black")
-  if (heatCount > 0 && allowedSet) {
-    return { bg: heatColorOnWhite(intensity), cursor: readOnly ? 'default' : 'pointer' };
-  }
-  // Unrestricted slot with heat → blue-300 → blue-800 gradient
+  // Others have picked this slot → blue heat gradient (light = few, dark = many)
   if (heatCount > 0) {
     return { bg: heatColor(intensity), cursor: readOnly ? 'default' : 'pointer' };
   }
-  // Organizer allowed this slot, no heat yet → pure WHITE
+  // Organizer allowed this slot, nobody picked yet → WHITE
   if (isAllowed && allowedSet) {
     return { bg: OPEN_BG, cursor: readOnly ? 'default' : 'pointer' };
   }
@@ -191,8 +179,6 @@ export default function AvailabilityGrid({
       ? t('grid.hint.heatmap')
       : t('grid.hint.plain');
 
-  const isWhiteSelection = selectionColor === '#ffffff';
-
   const cellStyle = (slotStart) => {
     const { bg, cursor } = getCellBg(slotStart, { selectedSlots, allowedSet, heat, maxHeat, readOnly, selectionColor });
     return {
@@ -257,14 +243,13 @@ export default function AvailabilityGrid({
       {/* Legend */}
       <div className="flex gap-3 mt-3 flex-wrap">
         {!readOnly && (
-          <LegendDot color={selectionColor} label={t('grid.legend.selected')} bordered={isWhiteSelection} />
+          <LegendDot color={selectionColor} label={t('grid.legend.selected')} />
         )}
         {allowedSet && <LegendDot color={OPEN_BG} label={t('grid.legend.shared')} bordered />}
         {maxHeat > 0 && (
           <LegendDot
-            gradient={allowedSet ? ['#ffffff', '#1e3a8a'] : ['#93c5fd', '#1e3a8a']}
+            gradient={['#93c5fd', '#1e3a8a']}
             label={t('grid.legend.others')}
-            bordered={!!allowedSet}
           />
         )}
       </div>
