@@ -9,27 +9,23 @@ const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_
 const OPEN_BG  = '#d6e5ff';  // lightest blue: organizer-allowed / user's own selection (כרגע נבחר)
 const EMPTY_BG = '#0f172a';  // dark navy: nobody selected this slot (any empty cell)
 
-// 3-stop heat gradient — dark=low demand, light=high demand:
-//   #739ee7 (יותר מתאים) → #9ac0ff (מאוד מתאים) → #d6e5ff (כרגע נבחר)
+// 4-stop heat gradient — dark=low demand, light=high demand:
+//   #1e3a8a (מעט ביקוש) → #739ee7 (יותר מתאים) → #9ac0ff (מאוד מתאים) → #d6e5ff (כרגע נבחר)
 const HEAT_STOPS = [
-  [115, 158, 231],   // #739ee7 — medium blue  (1 participant, יותר מתאים)
-  [154, 192, 255],   // #9ac0ff — light blue   (mid,           מאוד מתאים)
-  [214, 229, 255],   // #d6e5ff — lightest blue (max,           כרגע נבחר)
+  [ 30,  58, 138],   // #1e3a8a — dark navy    (low,  מעט ביקוש)
+  [115, 158, 231],   // #739ee7 — medium blue  (mid1, יותר מתאים)
+  [154, 192, 255],   // #9ac0ff — light blue   (mid2, מאוד מתאים)
+  [214, 229, 255],   // #d6e5ff — lightest blue (max,  כרגע נבחר)
 ];
 
 function heatColor(intensity) {
-  let r, g, b;
-  if (intensity <= 0.5) {
-    const t = intensity * 2;
-    r = Math.round(HEAT_STOPS[0][0] + (HEAT_STOPS[1][0] - HEAT_STOPS[0][0]) * t);
-    g = Math.round(HEAT_STOPS[0][1] + (HEAT_STOPS[1][1] - HEAT_STOPS[0][1]) * t);
-    b = Math.round(HEAT_STOPS[0][2] + (HEAT_STOPS[1][2] - HEAT_STOPS[0][2]) * t);
-  } else {
-    const t = (intensity - 0.5) * 2;
-    r = Math.round(HEAT_STOPS[1][0] + (HEAT_STOPS[2][0] - HEAT_STOPS[1][0]) * t);
-    g = Math.round(HEAT_STOPS[1][1] + (HEAT_STOPS[2][1] - HEAT_STOPS[1][1]) * t);
-    b = Math.round(HEAT_STOPS[1][2] + (HEAT_STOPS[2][2] - HEAT_STOPS[1][2]) * t);
-  }
+  const n = HEAT_STOPS.length - 1;
+  const scaled = Math.min(intensity * n, n);
+  const i = Math.min(Math.floor(scaled), n - 1);
+  const t = scaled - i;
+  const r = Math.round(HEAT_STOPS[i][0] + (HEAT_STOPS[i + 1][0] - HEAT_STOPS[i][0]) * t);
+  const g = Math.round(HEAT_STOPS[i][1] + (HEAT_STOPS[i + 1][1] - HEAT_STOPS[i][1]) * t);
+  const b = Math.round(HEAT_STOPS[i][2] + (HEAT_STOPS[i + 1][2] - HEAT_STOPS[i][2]) * t);
   return `rgb(${r},${g},${b})`;
 }
 
@@ -107,7 +103,7 @@ export default function AvailabilityGrid({
   numDays = 7,
   filterDisplayDays = false,
   filterDisplayHours = false,
-  selectionColor = '#d6e5ff',   // lightest blue: my selection (כרגע נבחר)
+  selectionColor = '#ffffff',   // white: my unsaved selection (הבחירה שלי)
 }) {
   const { t } = useTranslation();
 
@@ -258,8 +254,11 @@ export default function AvailabilityGrid({
       {/* Legend */}
       <div className="flex gap-3 mt-3 flex-wrap">
         <LegendDot color={EMPTY_BG} label={t('grid.legend.unavailable')} bordered />
+        {!readOnly && (
+          <LegendDot color={selectionColor} label={t('grid.legend.selected')} bordered />
+        )}
         {maxHeat > 0 && (
-          <LegendDot color={`rgb(${HEAT_STOPS[2].join(',')})`} label={t('grid.legend.others')} bordered />
+          <LegendDot color={`rgb(${HEAT_STOPS[HEAT_STOPS.length - 1].join(',')})`} label={t('grid.legend.others')} bordered />
         )}
       </div>
     </div>
