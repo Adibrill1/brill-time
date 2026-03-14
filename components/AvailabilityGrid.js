@@ -258,7 +258,12 @@ export default function AvailabilityGrid({
           <LegendDot color={selectionColor} label={t('grid.legend.selected')} bordered />
         )}
         {maxHeat > 0 && (
-          <LegendDot color={`rgb(${HEAT_STOPS[HEAT_STOPS.length - 1].join(',')})`} label={t('grid.legend.others')} bordered />
+          <>
+            <LegendDot color={`rgb(${HEAT_STOPS[0].join(',')})`} label={t('grid.legend.heat0')} bordered />
+            <LegendDot color={`rgb(${HEAT_STOPS[1].join(',')})`} label={t('grid.legend.heat1')} bordered />
+            <LegendDot color={`rgb(${HEAT_STOPS[2].join(',')})`} label={t('grid.legend.heat2')} bordered />
+            <LegendDot color={`rgb(${HEAT_STOPS[3].join(',')})`} label={t('grid.legend.others')} bordered />
+          </>
         )}
       </div>
     </div>
