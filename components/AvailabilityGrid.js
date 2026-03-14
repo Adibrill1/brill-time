@@ -9,12 +9,12 @@ const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_
 const OPEN_BG  = '#d6e5ff';  // lightest blue: organizer-allowed / user's own selection (כרגע נבחר)
 const EMPTY_BG = '#0f172a';  // dark navy: nobody selected this slot (any empty cell)
 
-// 3-stop heat gradient — dark=low demand, light=high demand:
-//   #1e3a8a (מעט ביקוש) → #739ee7 (יותר מתאים) → #9ac0ff (מאוד מתאים)
+// 3-stop heat gradient — light=low demand, dark=high demand:
+//   #9ac0ff (מאוד מתאים) → #739ee7 (יותר מתאים) → #1e3a8a (כרגע נבחר)
 const HEAT_STOPS = [
-  [ 30,  58, 138],   // #1e3a8a — dark navy   (1 participant, מעט ביקוש)
+  [154, 192, 255],   // #9ac0ff — light blue  (1 participant, מאוד מתאים)
   [115, 158, 231],   // #739ee7 — medium blue (mid,           יותר מתאים)
-  [154, 192, 255],   // #9ac0ff — light blue  (max,           מאוד מתאים)
+  [ 30,  58, 138],   // #1e3a8a — dark navy   (max,           כרגע נבחר)
 ];
 
 function heatColor(intensity) {
