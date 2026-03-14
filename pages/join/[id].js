@@ -348,7 +348,6 @@ export default function JoinEvent() {
               )}
               {heatmapOpen && (
                 <div className="px-4 pb-4">
-                  <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>{t('join.done.heatmapDesc')}</p>
                   <AvailabilityGrid
                     selectedSlots={new Set()}
                     allowedSlots={organizer_slots?.length > 0 ? organizer_slots : null}
