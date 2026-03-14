@@ -6,15 +6,15 @@ const END_HOUR = 23; // slots: 7:00–22:00 (16 slots)
 const ALL_HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
 // Cell colors — fixed, independent of light/dark mode
-const OPEN_BG  = '#9ac0ff';  // light blue: organizer-allowed / user's own selection
+const OPEN_BG  = '#d6e5ff';  // lightest blue: organizer-allowed / user's own selection (כרגע נבחר)
 const EMPTY_BG = '#0f172a';  // dark navy: nobody selected this slot (any empty cell)
 
-// 3-stop heat gradient (all blue shades):
-//   #9ac0ff (low demand) → #739ee7 (moderate) → #1e3a8a (highest demand)
+// 3-stop heat gradient — dark=low demand, light=high demand:
+//   #1e3a8a (מעט ביקוש) → #739ee7 (יותר מתאים) → #9ac0ff (מאוד מתאים)
 const HEAT_STOPS = [
-  [154, 192, 255],   // #9ac0ff — light blue  (1 participant, מעט ביקוש)
+  [ 30,  58, 138],   // #1e3a8a — dark navy   (1 participant, מעט ביקוש)
   [115, 158, 231],   // #739ee7 — medium blue (mid,           יותר מתאים)
-  [ 30,  58, 138],   // #1e3a8a — dark navy   (max,           כרגע הכי מתאים)
+  [154, 192, 255],   // #9ac0ff — light blue  (max,           מאוד מתאים)
 ];
 
 function heatColor(intensity) {
@@ -107,7 +107,7 @@ export default function AvailabilityGrid({
   numDays = 7,
   filterDisplayDays = false,
   filterDisplayHours = false,
-  selectionColor = '#9ac0ff',   // light blue: my selection / organizer's marker
+  selectionColor = '#d6e5ff',   // lightest blue: my selection (כרגע נבחר)
 }) {
   const { t } = useTranslation();
 
@@ -259,7 +259,7 @@ export default function AvailabilityGrid({
       <div className="flex gap-3 mt-3 flex-wrap">
         <LegendDot color={EMPTY_BG} label={t('grid.legend.unavailable')} bordered />
         {maxHeat > 0 && (
-          <LegendDot color={`rgb(${HEAT_STOPS[2].join(',')})`} label={t('grid.legend.others')} />
+          <LegendDot color={`rgb(${HEAT_STOPS[2].join(',')})`} label={t('grid.legend.others')} bordered />
         )}
       </div>
     </div>
