@@ -4,9 +4,6 @@ import { useEffect, useState } from 'react';
 export default function Layout({ children, title = 'Brill Time' }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [logoError, setLogoError] = useState(false);
-  const [logoLoaded, setLogoLoaded] = useState(false);
-
   useEffect(() => setMounted(true), []);
 
   return (
@@ -14,10 +11,7 @@ export default function Layout({ children, title = 'Brill Time' }) {
       <header dir="ltr" className="border-b" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-card)' }}>
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2 no-underline" style={{ color: '#3b82f6' }}>
-            <img src="/logo.png" alt="Brill Time"
-              style={{ height: '40px', width: 'auto', objectFit: 'contain', display: logoLoaded && !logoError ? 'block' : 'none' }}
-              onLoad={() => setLogoLoaded(true)} onError={() => setLogoError(true)} />
-            {(!logoLoaded || logoError) && <span className="font-bold text-xl">🗓️ Brill Time</span>}
+            <span className="font-bold text-xl">🗓️ Brill Time</span>
           </a>
           <div className="flex items-center gap-2">
             {mounted && (
