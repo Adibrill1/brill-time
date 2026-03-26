@@ -1,20 +1,20 @@
-import { readDb, writeDb } from '../../../lib/db';
+import { getEvent, updateEvent, getParticipantsByEvent, getAvailabilityByEvent } from '../../../lib/db';
 import { findWinningSlot } from '../../../lib/algorithm';
 
-export default function handler(req, res) {
+export default async function handler(req, res) {
   const { id, action } = req.query;
-  if (req.method === 'GET') return getEvent(req, res, id);
-  if (req.method === 'POST' && action === 'decide') return decideEvent(req, res, id);
+  if (req.method === 'GET') return getEventHandler(req, res, id);
+  if (req.method === 'POST' && action === 'decide') return decideEventHandler(req, res, id);
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-function getEvent(req, res, id) {
-  const db = readDb();
-  const event = db.events[id];
+async function getEventHandler(req, res, id) {
+  const event = await getEvent(id);
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
-  const participants = Object.values(db.participants).filter(p => p.event_id === id);
-  const availability = db.availability.filter(a => a.event_id === id);
+  const participants = await getParticipantsByEvent(id);
+  const availability = await getAvailabilityByEvent(id);
+
   const availabilityMap = {};
   for (const slot of availability) {
     if (!availabilityMap[slot.participant_id]) availabilityMap[slot.participant_id] = [];
@@ -27,14 +27,14 @@ function getEvent(req, res, id) {
     : [];
   const slotRestriction = organizerSlots.length > 0 ? organizerSlots : null;
 
-  // Auto-decide if deadline passed — always resolve to decided or cancelled
   if (event.status === 'open' && Date.now() > event.deadline_at) {
     const winning = findWinningSlot(participants, availabilityMap, event.min_participants || 1, slotRestriction);
     const newStatus = (winning && !winning.cancelled) ? 'decided' : 'cancelled';
-    db.events[id].status = newStatus;
-    db.events[id].winning_slot_start = winning?.slot_start ?? null;
-    db.events[id].winning_slot_end = winning?.slot_end ?? null;
-    writeDb(db);
+    await updateEvent(id, {
+      status: newStatus,
+      winning_slot_start: winning?.slot_start ?? null,
+      winning_slot_end: winning?.slot_end ?? null,
+    });
     event.status = newStatus;
     event.winning_slot_start = winning?.slot_start ?? null;
     event.winning_slot_end = winning?.slot_end ?? null;
@@ -52,13 +52,13 @@ function getEvent(req, res, id) {
   });
 }
 
-function decideEvent(req, res, id) {
-  const db = readDb();
-  const event = db.events[id];
+async function decideEventHandler(req, res, id) {
+  const event = await getEvent(id);
   if (!event) return res.status(404).json({ error: 'Event not found' });
 
-  const participants = Object.values(db.participants).filter(p => p.event_id === id);
-  const availability = db.availability.filter(a => a.event_id === id);
+  const participants = await getParticipantsByEvent(id);
+  const availability = await getAvailabilityByEvent(id);
+
   const availabilityMap = {};
   for (const slot of availability) {
     if (!availabilityMap[slot.participant_id]) availabilityMap[slot.participant_id] = [];
@@ -75,10 +75,11 @@ function decideEvent(req, res, id) {
   if (!winning) return res.status(400).json({ error: 'No availability submitted yet' });
 
   const newStatus = winning.cancelled ? 'cancelled' : 'decided';
-  db.events[id].status = newStatus;
-  db.events[id].winning_slot_start = winning.slot_start;
-  db.events[id].winning_slot_end = winning.slot_end;
-  writeDb(db);
+  await updateEvent(id, {
+    status: newStatus,
+    winning_slot_start: winning.slot_start,
+    winning_slot_end: winning.slot_end,
+  });
 
   return res.status(200).json({ winning });
 }
