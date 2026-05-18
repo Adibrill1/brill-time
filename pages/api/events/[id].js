@@ -8,78 +8,95 @@ export default async function handler(req, res) {
   return res.status(405).json({ error: 'Method not allowed' });
 }
 
-async function getEventHandler(req, res, id) {
-  const event = await getEvent(id);
-  if (!event) return res.status(404).json({ error: 'Event not found' });
-
-  const participants = await getParticipantsByEvent(id);
-  const availability = await getAvailabilityByEvent(id);
-
-  const availabilityMap = {};
+function buildAvailabilityMap(availability) {
+  const map = {};
   for (const slot of availability) {
-    if (!availabilityMap[slot.participant_id]) availabilityMap[slot.participant_id] = [];
-    availabilityMap[slot.participant_id].push(slot);
+    if (!map[slot.participant_id]) map[slot.participant_id] = [];
+    map[slot.participant_id].push(slot);
   }
+  return map;
+}
 
-  const organizerParticipant = participants.find(p => p.is_organizer);
-  const organizerSlots = organizerParticipant
-    ? (availabilityMap[organizerParticipant.id] || []).map(s => ({ slot_start: s.slot_start, slot_end: s.slot_end }))
+function getOrganizerRestriction(participants, availabilityMap) {
+  const organizer = participants.find(p => p.is_organizer);
+  const slots = organizer
+    ? (availabilityMap[organizer.id] || []).map(s => ({ slot_start: s.slot_start, slot_end: s.slot_end }))
     : [];
-  const slotRestriction = organizerSlots.length > 0 ? organizerSlots : null;
+  return { organizerSlots: slots, slotRestriction: slots.length > 0 ? slots : null };
+}
 
-  if (event.status === 'open' && Date.now() > event.deadline_at) {
-    const winning = findWinningSlot(participants, availabilityMap, event.min_participants || 1, slotRestriction);
-    const newStatus = (winning && !winning.cancelled) ? 'decided' : 'cancelled';
-    await updateEvent(id, {
-      status: newStatus,
-      winning_slot_start: winning?.slot_start ?? null,
-      winning_slot_end: winning?.slot_end ?? null,
+async function getEventHandler(req, res, id) {
+  try {
+    const event = await getEvent(id);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+
+    const [participants, availability] = await Promise.all([
+      getParticipantsByEvent(id),
+      getAvailabilityByEvent(id),
+    ]);
+
+    const availabilityMap = buildAvailabilityMap(availability);
+    const { organizerSlots, slotRestriction } = getOrganizerRestriction(participants, availabilityMap);
+
+    if (event.status === 'open' && Date.now() > event.deadline_at) {
+      const winning = findWinningSlot(participants, availabilityMap, event.min_participants || 1, slotRestriction);
+      const newStatus = (winning && !winning.cancelled) ? 'decided' : 'cancelled';
+      await updateEvent(id, {
+        status: newStatus,
+        winning_slot_start: winning?.slot_start ?? null,
+        winning_slot_end: winning?.slot_end ?? null,
+      });
+      event.status = newStatus;
+      event.winning_slot_start = winning?.slot_start ?? null;
+      event.winning_slot_end = winning?.slot_end ?? null;
+    }
+
+    return res.status(200).json({
+      event,
+      phase: 'participant_phase',
+      organizer_slots: organizerSlots,
+      participants: participants.map(p => ({
+        id: p.id, name: p.name, is_vip: !!p.is_vip, is_organizer: !!p.is_organizer,
+        has_confirmed: !!p.has_confirmed, submitted_at: p.submitted_at,
+      })),
+      availability: availabilityMap,
     });
-    event.status = newStatus;
-    event.winning_slot_start = winning?.slot_start ?? null;
-    event.winning_slot_end = winning?.slot_end ?? null;
+  } catch (e) {
+    console.error('getEvent error:', e);
+    return res.status(500).json({ error: 'Internal server error' });
   }
-
-  return res.status(200).json({
-    event,
-    phase: 'participant_phase',
-    organizer_slots: organizerSlots,
-    participants: participants.map(p => ({
-      id: p.id, name: p.name, is_vip: !!p.is_vip, is_organizer: !!p.is_organizer,
-      has_confirmed: !!p.has_confirmed, submitted_at: p.submitted_at,
-    })),
-    availability: availabilityMap,
-  });
 }
 
 async function decideEventHandler(req, res, id) {
-  const event = await getEvent(id);
-  if (!event) return res.status(404).json({ error: 'Event not found' });
+  try {
+    const event = await getEvent(id);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
 
-  const participants = await getParticipantsByEvent(id);
-  const availability = await getAvailabilityByEvent(id);
+    if (event.status !== 'open') {
+      return res.status(200).json({ status: event.status, winning_slot_start: event.winning_slot_start, winning_slot_end: event.winning_slot_end });
+    }
 
-  const availabilityMap = {};
-  for (const slot of availability) {
-    if (!availabilityMap[slot.participant_id]) availabilityMap[slot.participant_id] = [];
-    availabilityMap[slot.participant_id].push(slot);
+    const [participants, availability] = await Promise.all([
+      getParticipantsByEvent(id),
+      getAvailabilityByEvent(id),
+    ]);
+
+    const availabilityMap = buildAvailabilityMap(availability);
+    const { slotRestriction } = getOrganizerRestriction(participants, availabilityMap);
+
+    const winning = findWinningSlot(participants, availabilityMap, event.min_participants || 1, slotRestriction);
+    if (!winning) return res.status(400).json({ error: 'No availability submitted yet' });
+
+    const newStatus = winning.cancelled ? 'cancelled' : 'decided';
+    await updateEvent(id, {
+      status: newStatus,
+      winning_slot_start: winning.slot_start,
+      winning_slot_end: winning.slot_end,
+    });
+
+    return res.status(200).json({ winning });
+  } catch (e) {
+    console.error('decideEvent error:', e);
+    return res.status(500).json({ error: 'Internal server error' });
   }
-
-  const organizerParticipant = participants.find(p => p.is_organizer);
-  const organizerSlots = organizerParticipant
-    ? (availabilityMap[organizerParticipant.id] || []).map(s => ({ slot_start: s.slot_start, slot_end: s.slot_end }))
-    : [];
-  const slotRestriction = organizerSlots.length > 0 ? organizerSlots : null;
-
-  const winning = findWinningSlot(participants, availabilityMap, event.min_participants || 1, slotRestriction);
-  if (!winning) return res.status(400).json({ error: 'No availability submitted yet' });
-
-  const newStatus = winning.cancelled ? 'cancelled' : 'decided';
-  await updateEvent(id, {
-    status: newStatus,
-    winning_slot_start: winning.slot_start,
-    winning_slot_end: winning.slot_end,
-  });
-
-  return res.status(200).json({ winning });
 }

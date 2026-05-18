@@ -66,7 +66,7 @@ function FinalScreen({ event, participants, availability, t }) {
             <div className="text-sm mt-1">
               {dayNames[winStart.getDay()]}, {winStart.getDate()}/{winStart.getMonth() + 1}
             </div>
-            <div className="text-sm mt-2 font-medium">נתראה! 👋</div>
+            <div className="text-sm mt-2 font-medium">{t('join.final.seeYou')}</div>
           </div>
         )}
       </div>
