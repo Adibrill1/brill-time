@@ -8,14 +8,34 @@ export default async function handler(req, res) {
 }
 
 async function getParticipantHandler(req, res, id) {
-  const p = await getParticipant(id);
-  if (!p) return res.status(404).json({ error: 'Not found' });
-  return res.status(200).json({ participant: p });
+  try {
+    const p = await getParticipant(id);
+    if (!p) return res.status(404).json({ error: 'Not found' });
+    return res.status(200).json({
+      participant: {
+        id: p.id,
+        event_id: p.event_id,
+        name: p.name,
+        is_organizer: !!p.is_organizer,
+        is_vip: !!p.is_vip,
+        has_confirmed: !!p.has_confirmed,
+        submitted_at: p.submitted_at,
+      },
+    });
+  } catch (e) {
+    console.error('getParticipant error:', e);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }
 
 async function confirmParticipantHandler(req, res, id) {
-  const p = await getParticipant(id);
-  if (!p) return res.status(404).json({ error: 'Not found' });
-  await updateParticipant(id, { has_confirmed: true });
-  return res.status(200).json({ ok: true });
+  try {
+    const p = await getParticipant(id);
+    if (!p) return res.status(404).json({ error: 'Not found' });
+    await updateParticipant(id, { has_confirmed: true });
+    return res.status(200).json({ ok: true });
+  } catch (e) {
+    console.error('confirmParticipant error:', e);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }

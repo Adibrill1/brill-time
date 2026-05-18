@@ -43,7 +43,7 @@ function buildAllowedSet(days, allowedSlots) {
       const slotStart = getSlotStart(day, hour);
       const slotEnd = slotStart + 3600000;
       for (const allowed of allowedSlots) {
-        if (allowed.slot_start <= slotStart && slotEnd <= allowed.slot_end + 1) {
+        if (allowed.slot_start <= slotStart && slotEnd <= allowed.slot_end) {
           set.add(slotStart);
           break;
         }
