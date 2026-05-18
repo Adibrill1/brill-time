@@ -36,6 +36,7 @@ async function createEventHandler(req, res) {
     return res.status(400).json({ error: 'Deadline must be in the future' });
   }
 
+  console.log('[createEvent] attempting insert, event_id:', event_id, 'supabaseUrl:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'set' : 'MISSING', 'serviceKey:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set' : 'MISSING');
   await createEvent({
     id: event_id,
     name: name.trim(),
@@ -59,12 +60,13 @@ async function createEventHandler(req, res) {
     created_at: now,
   });
 
+  console.log('[createEvent] success, event_id:', event_id);
   return res.status(201).json({
     event_id,
     participants: [{ id: participant_id, name: organizer_name.trim(), is_organizer: true, is_vip: true }],
   });
   } catch (e) {
-    console.error('createEvent error:', e);
+    console.error('[createEvent] error:', e.message);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
