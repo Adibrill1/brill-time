@@ -29,6 +29,7 @@ export default function OrganizerDash() {
   const { id, participants: participantsParam } = router.query;
 
   const [eventData, setEventData] = useState(null);
+  const [fetchError, setFetchError] = useState('');
   const [loading, setLoading] = useState(true);
   const [organizerParticipantId, setOrganizerParticipantId] = useState(null);
   const [gridOpen, setGridOpen] = useState(false); // collapsed by default
@@ -51,12 +52,18 @@ export default function OrganizerDash() {
     if (!id) return;
     try {
       const res = await fetch(`/api/events/${id}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        let msg = `שגיאה ${res.status}`;
+        try { const body = await res.json(); if (body.error) msg += `: ${body.error}`; } catch {}
+        setFetchError(msg);
+        return;
+      }
       const data = await res.json();
       setEventData(data);
       setIsDeadlinePassed(Date.now() > data.event.deadline_at);
     } catch (e) {
       console.error(e);
+      setFetchError(e.message || 'שגיאת רשת');
     } finally {
       setLoading(false);
     }
@@ -157,7 +164,14 @@ export default function OrganizerDash() {
     return <Layout><div className="text-center py-12">{t('common.loading')}</div></Layout>;
   }
   if (!eventData) {
-    return <Layout><div className="text-center py-12">{t('common.eventNotFound')}</div></Layout>;
+    return (
+      <Layout>
+        <div className="text-center py-12">
+          <p>{t('common.eventNotFound')}</p>
+          {fetchError && <p className="text-sm mt-2" style={{ color: '#dc2626' }}>{fetchError}</p>}
+        </div>
+      </Layout>
+    );
   }
 
   const { event, participants, availability, organizer_slots } = eventData;
