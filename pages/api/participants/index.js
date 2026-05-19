@@ -9,26 +9,35 @@ export default async function handler(req, res) {
 async function createParticipantHandler(req, res) {
   const { event_id, name } = req.body;
 
-  if (!event_id || !name?.trim()) {
+  const trimmedName = name?.trim();
+  if (!event_id || !trimmedName) {
     return res.status(400).json({ error: 'event_id and name are required' });
   }
+  if (trimmedName.length > 100) {
+    return res.status(400).json({ error: 'Name must be 100 characters or fewer' });
+  }
 
-  const event = await getEvent(event_id);
-  if (!event) return res.status(404).json({ error: 'Event not found' });
-  if (event.status !== 'open') return res.status(400).json({ error: 'Event is closed' });
+  try {
+    const event = await getEvent(event_id);
+    if (!event) return res.status(404).json({ error: 'Event not found' });
+    if (event.status !== 'open') return res.status(400).json({ error: 'Event is closed' });
 
-  const participant_id = uuidv4().replace(/-/g, '').substring(0, 12);
+    const participant_id = uuidv4().replace(/-/g, '').substring(0, 12);
 
-  await createParticipant({
-    id: participant_id,
-    event_id,
-    name: name.trim(),
-    is_organizer: false,
-    is_vip: false,
-    has_confirmed: false,
-    submitted_at: null,
-    created_at: Date.now(),
-  });
+    await createParticipant({
+      id: participant_id,
+      event_id,
+      name: trimmedName,
+      is_organizer: false,
+      is_vip: false,
+      has_confirmed: false,
+      submitted_at: null,
+      created_at: Date.now(),
+    });
 
-  return res.status(201).json({ participant_id });
+    return res.status(201).json({ participant_id });
+  } catch (e) {
+    console.error('createParticipant error:', e);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }
